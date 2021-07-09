@@ -1,64 +1,100 @@
-import './Note.css';
+import './DroppableWrapper.css';
 
 import {
-    INote,
-    NoteId,
+    INotePosition,
 } from '../../types/notes';
 
 import React, {
-    useState,
+    useEffect,
+    useRef,
 } from 'react';
 
 interface IProps {
-    note: INote,
-    isEdit: boolean;
-    onRemove: (id: NoteId) => void;
-    onStartEdit: (id: NoteId) => void;
-    onFinishEdit: (id: NoteId, note: INote) => void;
+    children: JSX.Element;
+    initialPosition?: INotePosition;
+    onFinishMove: (position: INotePosition) => void,
 }
 
-function Note({
-    note: {
-        id,
-        text,
-    },
-    isEdit,
-    onRemove,
-    onStartEdit,
-    onFinishEdit,
+function DroppableWrapper({
+    children,
+    initialPosition,
+    onFinishMove,
 }: IProps) {
-    const [value, setValue] = useState(text);
+    const element = useRef<HTMLDivElement>(null);
+
+    const getCoordinates = () => {
+        if (element && element.current) {
+            const box = element.current.getBoundingClientRect();
+
+            return {
+                top: box!.top + window.pageYOffset,
+                left: box!.left + window.pageXOffset,
+            };
+        }
+
+        return {
+            top: 0,
+            left: 0,
+        }
+    }
+
+    useEffect(() => {
+        console.log(initialPosition)
+        if (initialPosition && element && element.current) {
+            element.current.style.left = `${initialPosition.x}px`;
+            element.current.style.top = `${initialPosition.y}px`;
+        }
+
+        const onMouseDown = (evt: MouseEvent) => {
+            if (element && element.current) {
+                const coordinates = getCoordinates();
+                const shiftX = evt.pageX - coordinates.left;
+                const shiftY = evt.pageY - coordinates.top;
+
+                const moveAt = (evt: MouseEvent) => {
+                    if (element && element.current) {
+                        element.current.style.left = `${evt.pageX - shiftX}px`;
+                        element.current.style.top = `${evt.pageY - shiftY}px`;
+                    }
+                }
+
+                moveAt(evt);
+
+                document.onmousemove = (evt) => {
+                    moveAt(evt);
+                };
+
+                element.current.onmouseup = () => {
+                    document.onmousemove = null;
+
+                    if (element && element.current) {
+                        element.current.onmouseup = null;
+
+                        onFinishMove({
+                            x: element.current.offsetLeft,
+                            y: element.current.offsetTop,
+                        });
+                    }
+                };
+            }
+        };
+
+        element?.current?.addEventListener('mousedown', onMouseDown);
+
+        return () => {
+            element?.current?.removeEventListener('mousedown', onMouseDown);
+        }
+    }, [])
 
     return (
         <div
-            className={'note'}
-            onClick={() => onStartEdit(id)}
+            className={'droppable-wrapper'}
+            ref={element}
+            onDragStart={() => false}
         >
-            {isEdit && (
-                <textarea
-                    className={'note__textarea'}
-                    value={value}
-                    onChange={(event) => setValue(event.target.value)}
-                    onBlur={() => {
-                        if (value !== text) {
-                            const note = {
-                                id,
-                                text: value,
-                            };
-
-                            onFinishEdit(id, note);
-                        }
-                    }}
-                />
-            )}
-            {!isEdit && text}
-            <button
-                onClick={() => onRemove(id)}
-            >
-                REMOVE
-            </button>
+            {children}
         </div>
     );
 }
 
-export default Note;
+export default DroppableWrapper;
