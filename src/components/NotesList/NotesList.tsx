@@ -14,10 +14,10 @@ import Note from '../Note/Note';
 interface IProps {
     notes: INote[];
     editNoteId: NoteId | null;
-    onFinishMove: any;
-    onRemoveNote: any;
-    onStartEditNote: any;
-    onFinishEditNote: any;
+    onFinishMove: (id: NoteId, position: INotePosition) => void,
+    onRemoveNote: (id: NoteId) => void,
+    onStartEditNote: (id: NoteId) => void,
+    onFinishEditNote: (id: NoteId, text: string) => void,
 }
 
 function NotesList({
